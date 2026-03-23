@@ -1,0 +1,224 @@
+{
+    "name": "00_pl_orchestrator",
+    "properties": {
+        "description": "call other pipelines for the ETL process",
+        "activities": [
+            {
+                "name": "Run Silver",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Set variable1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "01_pl_silver",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "Environment": "silver"
+                    }
+                }
+            },
+            {
+                "name": "Run Gold",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Run Silver",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "02_pl_gold",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Log Start Execution Pipeline",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlPoolSource",
+                        "sqlReaderStoredProcedureName": "[config].[LogStartExec]",
+                        "storedProcedureParameters": {
+                            "PipelineName": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().Pipeline",
+                                    "type": "Expression"
+                                }
+                            },
+                            "PipelineRunID": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().RunId",
+                                    "type": "Expression"
+                                }
+                            },
+                            "PipelineWorkspace": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().DataFactory",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        "queryTimeout": "02:00:00"
+                    },
+                    "dataset": {
+                        "referenceName": "SqlPoolTable1",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Set variable1",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Log Start Execution Pipeline",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "ID_Log",
+                    "value": {
+                        "value": "@activity('Log Start Execution Pipeline').output.firstRow.ID_Log",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Log End Success Execution Pipeline",
+                "type": "SqlPoolStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Run Gold",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "sqlPool": {
+                    "referenceName": "fabmigration",
+                    "type": "SqlPoolReference"
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[config].[LogEndExec]",
+                    "storedProcedureParameters": {
+                        "IDLog": {
+                            "value": {
+                                "value": "@variables('ID_Log')",
+                                "type": "Expression"
+                            },
+                            "type": "Int32"
+                        },
+                        "Status": {
+                            "value": "Succeeded",
+                            "type": "String"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Log End Failure Execution Pipeline",
+                "type": "SqlPoolStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Run Silver",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    },
+                    {
+                        "activity": "Run Gold",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "sqlPool": {
+                    "referenceName": "fabmigration",
+                    "type": "SqlPoolReference"
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[config].[LogEndExec]",
+                    "storedProcedureParameters": {
+                        "IDLog": {
+                            "value": {
+                                "value": "@variables('ID_Log')",
+                                "type": "Expression"
+                            },
+                            "type": "Int32"
+                        },
+                        "Status": {
+                            "value": "Failed",
+                            "type": "String"
+                        }
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "ID_Log": {
+                "type": "Integer",
+                "defaultValue": -1
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-02-11T23:51:24Z"
+    },
+    "type": "Microsoft.Synapse/workspaces/pipelines"
+}

@@ -1,0 +1,517 @@
+{
+    "name": "03_pl_complex",
+    "properties": {
+        "description": "Run all notebooks to move data from Bronze to Silver.",
+        "activities": [
+            {
+                "name": "ForEach1",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Get Metadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Get Metadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "Switch1",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@if(empty(item().Notebook), 1, if(bool(item().NeedParameters), 2, 3) )",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "1",
+                                        "activities": [
+                                            {
+                                                "name": "Copy data1",
+                                                "type": "Copy",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "source": {
+                                                        "type": "SqlPoolSource",
+                                                        "sqlReaderQuery": {
+                                                            "value": "@concat('SELECT * FROM [', item().targetEnv, '].[', item().entityName, ']')",
+                                                            "type": "Expression"
+                                                        },
+                                                        "queryTimeout": "02:00:00"
+                                                    },
+                                                    "sink": {
+                                                        "type": "ParquetSink",
+                                                        "storeSettings": {
+                                                            "type": "AzureBlobFSWriteSettings",
+                                                            "copyBehavior": "FlattenHierarchy"
+                                                        },
+                                                        "formatSettings": {
+                                                            "type": "ParquetWriteSettings"
+                                                        }
+                                                    },
+                                                    "enableStaging": false,
+                                                    "translator": {
+                                                        "type": "TabularTranslator",
+                                                        "typeConversion": true,
+                                                        "typeConversionSettings": {
+                                                            "allowDataTruncation": true,
+                                                            "treatBooleanAsNumber": false
+                                                        }
+                                                    }
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "SqlPoolTable1",
+                                                        "type": "DatasetReference"
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "Parquet1",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "filename": {
+                                                                "value": "@concat(item().entityName, '.parquet')",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "2",
+                                        "activities": [
+                                            {
+                                                "name": "NotebookWithParameters",
+                                                "type": "SynapseNotebook",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "notebook": {
+                                                        "referenceName": {
+                                                            "value": "@item().Notebook",
+                                                            "type": "Expression"
+                                                        },
+                                                        "type": "NotebookReference"
+                                                    },
+                                                    "parameters": {
+                                                        "ADLSaccount": {
+                                                            "value": {
+                                                                "value": "@item().ADLSaccount",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "containerName": {
+                                                            "value": {
+                                                                "value": "@item().containerName",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "sourceFolder": {
+                                                            "value": {
+                                                                "value": "@item().sourceFolder",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "targetFolder": {
+                                                            "value": {
+                                                                "value": "@item().targetFolder",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "targetEnv": {
+                                                            "value": {
+                                                                "value": "@item().targetEnv",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "entityName": {
+                                                            "value": {
+                                                                "value": "@item().entityName",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        },
+                                                        "fileExtension": {
+                                                            "value": {
+                                                                "value": "@item().fileExtension",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "snapshot": true,
+                                                    "sparkPool": {
+                                                        "referenceName": "fabmigration",
+                                                        "type": "BigDataPoolReference"
+                                                    },
+                                                    "executorSize": "Small",
+                                                    "conf": {
+                                                        "spark.dynamicAllocation.enabled": true,
+                                                        "spark.dynamicAllocation.minExecutors": 1,
+                                                        "spark.dynamicAllocation.maxExecutors": 10
+                                                    },
+                                                    "driverSize": "Small",
+                                                    "numExecutors": 1,
+                                                    "authentication": {
+                                                        "type": "MSI"
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "3",
+                                        "activities": [
+                                            {
+                                                "name": "NotebookWithoutParameters",
+                                                "type": "SynapseNotebook",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "notebook": {
+                                                        "referenceName": {
+                                                            "value": "@item().Notebook",
+                                                            "type": "Expression"
+                                                        },
+                                                        "type": "NotebookReference"
+                                                    },
+                                                    "snapshot": true,
+                                                    "sparkPool": {
+                                                        "referenceName": "fabmigration",
+                                                        "type": "BigDataPoolReference"
+                                                    },
+                                                    "executorSize": "Small",
+                                                    "conf": {
+                                                        "spark.dynamicAllocation.enabled": true,
+                                                        "spark.dynamicAllocation.minExecutors": 1,
+                                                        "spark.dynamicAllocation.maxExecutors": 10
+                                                    },
+                                                    "driverSize": "Small",
+                                                    "numExecutors": 1,
+                                                    "authentication": {
+                                                        "type": "MSI"
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Get Metadata",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Set variable1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlPoolSource",
+                        "sqlReaderStoredProcedureName": "[config].[GetMetadata]",
+                        "storedProcedureParameters": {
+                            "environment": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().parameters.Environment",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        "queryTimeout": "02:00:00"
+                    },
+                    "dataset": {
+                        "referenceName": "SqlPoolTable1",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "Log Start Execution Pipeline",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlPoolSource",
+                        "sqlReaderStoredProcedureName": "[config].[LogStartExec]",
+                        "storedProcedureParameters": {
+                            "PipelineName": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().Pipeline",
+                                    "type": "Expression"
+                                }
+                            },
+                            "PipelineRunID": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().RunId",
+                                    "type": "Expression"
+                                }
+                            },
+                            "PipelineWorkspace": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@pipeline().DataFactory",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        "queryTimeout": "02:00:00"
+                    },
+                    "dataset": {
+                        "referenceName": "SqlPoolTable1",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Set variable1",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Log Start Execution Pipeline",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "ID_Log",
+                    "value": {
+                        "value": "@activity('Log Start Execution Pipeline').output.firstRow.ID_Log",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Log End Success Execution Pipeline",
+                "type": "SqlPoolStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Execute Pipeline1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "sqlPool": {
+                    "referenceName": "fabmigration",
+                    "type": "SqlPoolReference"
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[config].[LogEndExec]",
+                    "storedProcedureParameters": {
+                        "IDLog": {
+                            "value": {
+                                "value": "@variables('ID_Log')",
+                                "type": "Expression"
+                            },
+                            "type": "Int32"
+                        },
+                        "Status": {
+                            "value": "Succeeded",
+                            "type": "String"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Log End Failure Execution Pipeline 2",
+                "type": "SqlPoolStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "ForEach1",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "sqlPool": {
+                    "referenceName": "fabmigration",
+                    "type": "SqlPoolReference"
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[config].[LogEndExec]",
+                    "storedProcedureParameters": {
+                        "IDLog": {
+                            "value": {
+                                "value": "@variables('ID_Log')",
+                                "type": "Expression"
+                            },
+                            "type": "Int32"
+                        },
+                        "Status": {
+                            "value": "Failed",
+                            "type": "String"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Log End Failure Execution Pipeline 1",
+                "type": "SqlPoolStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Get Metadata",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "sqlPool": {
+                    "referenceName": "fabmigration",
+                    "type": "SqlPoolReference"
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[config].[LogEndExec]",
+                    "storedProcedureParameters": {
+                        "IDLog": {
+                            "value": {
+                                "value": "@variables('ID_Log')",
+                                "type": "Expression"
+                            },
+                            "type": "Int32"
+                        },
+                        "Status": {
+                            "value": "Failed",
+                            "type": "String"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Execute Pipeline1",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "ForEach1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "02_pl_gold",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            }
+        ],
+        "parameters": {
+            "Environment": {
+                "type": "string",
+                "defaultValue": "silver"
+            }
+        },
+        "variables": {
+            "ID_Log": {
+                "type": "Integer",
+                "defaultValue": -1
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-02-24T18:38:42Z"
+    },
+    "type": "Microsoft.Synapse/workspaces/pipelines"
+}
