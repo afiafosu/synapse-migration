@@ -1,0 +1,60 @@
+resources:
+  jobs:
+    03_pl_Gold:
+      name: 03_pl_Gold
+      tasks:
+        - task_key: logStart
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logStart
+            base_parameters:
+              PipelineName: "{{job.name}}"
+              RunID: "{{job.run_id}}"
+              workspace: "{{workspace.url}}"
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: GetMetadata
+          depends_on:
+            - task_key: logStart
+          notebook_task:
+            notebook_path: /Workspace/Shared/Config/nb_GetMetadataGold
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: ProcessSP
+          depends_on:
+            - task_key: GetMetadata
+          for_each_task:
+            inputs: "{{tasks.GetMetadata.values.sp_names}}"
+            task:
+              task_key: ProcessSP_iteration
+              notebook_task:
+                notebook_path: /Workspace/Shared/Config/nb_RunSP
+                base_parameters:
+                  SPName: "{{input}}"
+                source: WORKSPACE
+              environment_key: Default
+        - task_key: LogEnd
+          depends_on:
+            - task_key: ProcessSP
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Succeeded
+            source: WORKSPACE
+        - task_key: LogEndFailed
+          depends_on:
+            - task_key: ProcessSP
+          run_if: AT_LEAST_ONE_FAILED
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Failed
+            source: WORKSPACE
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "4"
+      performance_target: PERFORMANCE_OPTIMIZED

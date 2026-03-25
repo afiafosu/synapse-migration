@@ -1,0 +1,58 @@
+resources:
+  jobs:
+    00_pl_orchestrator:
+      name: 00_pl_orchestrator
+      tasks:
+        - task_key: logStart
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logStart
+            base_parameters:
+              PipelineName: "{{job.name}}"
+              RunID: "{{job.run_id}}"
+              workspace: "{{workspace.id}}"
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: run_01_pl_Silver
+          depends_on:
+            - task_key: logStart
+          run_job_task:
+            job_id: 1086912385319177
+        - task_key: SilverFailed
+          depends_on:
+            - task_key: run_01_pl_Silver
+          run_if: AT_LEAST_ONE_FAILED
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Failed
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: run_03_pl_Gold
+          depends_on:
+            - task_key: run_01_pl_Silver
+          run_job_task:
+            job_id: 518470907338672
+        - task_key: logEnd
+          depends_on:
+            - task_key: run_03_pl_Gold
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Succeded
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: logEndFailed
+          depends_on:
+            - task_key: run_03_pl_Gold
+          run_if: AT_LEAST_ONE_FAILED
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Succeded
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+      queue:
+        enabled: true

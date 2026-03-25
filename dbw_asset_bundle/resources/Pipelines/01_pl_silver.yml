@@ -1,0 +1,59 @@
+resources:
+  jobs:
+    01_pl_silver:
+      name: 01_pl_silver
+      tasks:
+        - task_key: logStart
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logStart
+            base_parameters:
+              PipelineName: "{{job.name}}"
+              RunID: "{{job.run_id}}"
+              workspace: "{{workspace.url}}"
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: GetEntities
+          depends_on:
+            - task_key: logStart
+          notebook_task:
+            notebook_path: /Workspace/Shared/Config/nb_GetEntities
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: ProcessEntity
+          depends_on:
+            - task_key: GetEntities
+          for_each_task:
+            inputs: "{{tasks.GetEntities.values.entities}}"
+            task:
+              task_key: ProcessEntity_iteration
+              notebook_task:
+                notebook_path: /Workspace/Shared/Retail/01_SilverCleanEntity
+                base_parameters:
+                  EntityName: "{{input}}"
+                source: WORKSPACE
+              existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: LogEndFailed
+          depends_on:
+            - task_key: ProcessEntity
+          run_if: AT_LEAST_ONE_FAILED
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Failed
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+        - task_key: logEnd
+          depends_on:
+            - task_key: ProcessEntity
+          notebook_task:
+            notebook_path: /Workspace/Shared/Reusable/nb_logEnd
+            base_parameters:
+              IDLog: "{{tasks.logStart.values.IDLog}}"
+              Status: Succeded
+            source: WORKSPACE
+          existing_cluster_id: 0303-160847-d6utm0ao
+      tags:
+        created-by: createAsset-tool
+      queue:
+        enabled: true
