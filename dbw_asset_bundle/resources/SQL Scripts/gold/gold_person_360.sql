@@ -1,0 +1,28 @@
+CREATE OR REPLACE TABLE `main`.`gold`.`person_360`
+( 
+	`business_entity_id` INT,
+	`PersonType`  STRING,
+	`NameStyle` BOOLEAN,
+	`Title`  STRING,
+	`FirstName`  STRING,
+	`MiddleName`  STRING,
+	`LastName`  STRING,
+	`Suffix`  STRING,
+	`EmailPromotion` INT,
+	`preferred_email`  STRING,
+	`email_domain`  STRING,
+	`email_domain_category`  STRING,
+	`preferred_phone_e164`  STRING,
+	`preferred_phone_type`  STRING,
+	`canonical_address_sk`  STRING,
+	`AddressLine1`  STRING,
+	`AddressLine2`  STRING,
+	`City`  STRING,
+	`StateProvinceCode`  STRING,
+	`PostalCode`  STRING,
+	`CountryRegionCode`  STRING,
+	`CountryName`  STRING,
+	`full_name`  STRING,
+	`has_email` int  NOT NULL,
+	`has_phone` int  NOT NULL
+);

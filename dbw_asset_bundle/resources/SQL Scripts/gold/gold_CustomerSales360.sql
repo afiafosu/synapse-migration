@@ -1,0 +1,26 @@
+CREATE OR REPLACE TABLE `main`.`gold`.`CustomerSales360`
+( 
+	`CustomerID` BIGINT,
+	`FirstName`  STRING,
+	`LastName`  STRING,
+	`preferred_email`  STRING,
+	`AddressLine1`  STRING,
+	`City`  STRING,
+	`StateProvince`  STRING,
+	`CountryRegion`  STRING,
+	`CustomerName`  STRING,
+	`FirstOrderDate` TIMESTAMP  ,
+	`LastOrderDate` TIMESTAMP  ,
+	`OrderCount` INT,
+	`TotalSubTotal` decimal(38,4),
+	`TotalTaxAmt` decimal(38,4),
+	`TotalFreight` decimal(38,4),
+	`TotalRevenue` decimal(38,4),
+	`TotalUnits` decimal(38,4),
+	`TotalLines` INT,
+	`AvgOrderValue` decimal(38,19),
+	`AvgLineAmount` decimal(38,19),
+	`AvgDistinctProductsPerOrder` decimal(38,19),
+	`IsActiveLast365Days` BOOLEAN,
+	`LoadDate` TIMESTAMP  NOT NULL
+);
